@@ -1,2 +1,4 @@
-com\scb\keycloak\X509Authenticator.class
-com\scb\keycloak\X509AuthenticatorFactory.class
+com\scb\keycloak\OpaqueResourceProviderFactory.class
+com\scb\keycloak\OpaqueResourceProvider.class
+com\scb\keycloak\OpaqueTokenResponse.class
+com\scb\keycloak\OpaqueTokenMapper.class
