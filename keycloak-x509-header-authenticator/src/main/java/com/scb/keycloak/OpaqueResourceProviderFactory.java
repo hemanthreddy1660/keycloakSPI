@@ -17,5 +17,5 @@ public class OpaqueResourceProviderFactory implements RealmResourceProviderFacto
     @Override public void close() {}
 
     @Override
-    public String getId() { return "opaque"; }
+    public String getId() { return "oauth2"; }
 }

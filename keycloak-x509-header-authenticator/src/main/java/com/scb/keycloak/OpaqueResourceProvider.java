@@ -11,6 +11,10 @@ import org.keycloak.services.resource.RealmResourceProvider;
 import org.keycloak.common.util.Time;
 import org.keycloak.util.JsonSerialization;
 import org.keycloak.services.util.DefaultClientSessionContext;
+import org.keycloak.TokenVerifier;
+import org.keycloak.common.VerificationException;
+import org.keycloak.crypto.SignatureProvider;
+import org.keycloak.crypto.SignatureVerifierContext;
 
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -54,8 +58,6 @@ public class OpaqueResourceProvider implements RealmResourceProvider {
             return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("error", "service_account_disabled")).build();
         }
 
-        // --- CRITICAL FIX FOR NPE ---
-        // We must set the client in the context so internal Mappers don't crash
         session.getContext().setClient(client);
 
         String tokenType = client.getAttribute("token.type");
@@ -92,9 +94,29 @@ public class OpaqueResourceProvider implements RealmResourceProvider {
         ClientModel client = realm.getClientByClientId(clientId);
         if (client == null) return Response.ok(Map.of("active", false)).build();
 
-        // Fix context here too just in case
         session.getContext().setClient(client);
 
+        // --- BRANCH 1: JWT INTROSPECTION ---
+        if (token.contains(".")) {
+            try {
+                // FIXED VERIFIER: Using session.tokens().decode() is the safest way in modern Keycloak
+                AccessToken jwt = session.tokens().decode(token, AccessToken.class);
+
+                if (jwt == null) {
+                    return Response.ok(Map.of("active", false, "error", "invalid_token")).build();
+                }
+
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = JsonSerialization.mapper.convertValue(jwt, Map.class);
+                response.put("active", true);
+                return Response.ok(response).build();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return Response.ok(Map.of("active", false, "error", "verification_failed")).build();
+            }
+        }
+
+        // --- BRANCH 2: OPAQUE INTROSPECTION ---
         UserSessionModel userSession = session.sessions().getUserSessionsStream(realm, client)
                 .filter(s -> token.equals(s.getNote("opaque_handle")))
                 .findFirst()
@@ -117,6 +139,7 @@ public class OpaqueResourceProvider implements RealmResourceProvider {
         try {
             responseMap.putAll(JsonSerialization.mapper.convertValue(jwtPayload, Map.class));
         } catch (Exception e) {
+            e.printStackTrace();
             responseMap.put("sub", userSession.getUser().getId());
         }
 
