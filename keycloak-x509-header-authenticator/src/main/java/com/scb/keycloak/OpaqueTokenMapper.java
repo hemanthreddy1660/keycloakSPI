@@ -11,9 +11,13 @@ public class OpaqueTokenMapper extends AbstractOIDCProtocolMapper implements OID
     public static final String PROVIDER_ID = "strict-opaque-mapper";
 
     @Override
-    public AccessToken transformAccessToken(AccessToken token, ProtocolMapperModel mappingModel, KeycloakSession session, UserSessionModel userSession, ClientSessionContext clientSessionCtx) {
+    public AccessToken transformAccessToken(AccessToken token, ProtocolMapperModel mappingModel,
+                                            KeycloakSession session, UserSessionModel userSession,
+                                            ClientSessionContext clientSessionCtx) {
         String handle = userSession.getNote("opaque_handle");
-        if (handle != null) token.getOtherClaims().put("opaque_handle", handle);
+        if (handle != null) {
+            token.getOtherClaims().put("opaque_handle", handle);
+        }
         return token;
     }
 
@@ -21,9 +25,5 @@ public class OpaqueTokenMapper extends AbstractOIDCProtocolMapper implements OID
     @Override public String getDisplayType() { return "Opaque Reference Mapper"; }
     @Override public String getDisplayCategory() { return TOKEN_MAPPER_CATEGORY; }
     @Override public String getHelpText() { return "Adds the opaque handle to internal tokens."; }
-
-    @Override
-    public List<ProviderConfigProperty> getConfigProperties() {
-        return new ArrayList<>();
-    }
+    @Override public List<ProviderConfigProperty> getConfigProperties() { return new ArrayList<>(); }
 }
